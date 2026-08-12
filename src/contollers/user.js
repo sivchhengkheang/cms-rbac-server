@@ -1,4 +1,5 @@
 import User from "../models/userSchema.js";
+import { getIO } from "../socket.js";
 import bcrypt from "bcrypt";
 // Get Users
 export const getAllUser = async (req, res) => {
@@ -52,6 +53,10 @@ export const create = async (req, res) => {
 
     // save user to the database
     await newUser.save();
+    try {
+      getIO().emit("user:created", newUser);
+      getIO().emit("user:changed");
+    } catch (e) {}
 
     res
       .status(201)
@@ -71,4 +76,47 @@ export const deleteUser = async (req, res) => {
   }
 
   res.status(200).json({ message: "User deleted successfully" });
+  try {
+    getIO().emit("user:deleted", { id: userId });
+    getIO().emit("user:changed");
+  } catch (e) {}
+};
+
+export const updateUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { role } = req.body;
+
+    const validRoles = ["Admin", "Manager", "User"];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({
+        message: "Role is required and must be Admin, Manager, or User",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.role = role;
+    await user.save();
+
+    try {
+      getIO().emit("user:updated", user);
+      getIO().emit("user:changed");
+    } catch (e) {}
+
+    res.status(200).json({
+      success: true,
+      data: user,
+      message: "User role updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating user role", error.message);
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
 };

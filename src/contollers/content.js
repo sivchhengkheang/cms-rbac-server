@@ -1,4 +1,5 @@
 import Content from "../models/contentSchema.js";
+import { getIO } from "../socket.js";
 
 // Get all content (optionally filter by status or tag)
 export const getAllContent = async (req, res) => {
@@ -66,6 +67,12 @@ export const createContent = async (req, res) => {
     });
 
     await newContent.save();
+    try {
+      getIO().emit("content:created", newContent);
+      getIO().emit("content:changed");
+    } catch (e) {
+      // socket may not be initialized in some environments
+    }
     res.status(201).json({ success: true, data: newContent });
   } catch (err) {
     console.error(err);
@@ -86,6 +93,10 @@ export const deleteContent = async (req, res) => {
         .json({ success: false, message: "Content not found" });
 
     await Content.findByIdAndDelete(id);
+    try {
+      getIO().emit("content:deleted", { id });
+      getIO().emit("content:changed");
+    } catch (e) {}
     res.status(200).json({ success: true, message: "Content deleted" });
   } catch (err) {
     console.error(err);
@@ -130,6 +141,10 @@ export const updateContent = async (req, res) => {
     }
 
     const updated = await Content.findByIdAndUpdate(id, updates, { new: true });
+    try {
+      getIO().emit("content:updated", updated);
+      getIO().emit("content:changed");
+    } catch (e) {}
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
     console.error(err);

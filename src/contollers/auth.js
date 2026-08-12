@@ -31,7 +31,9 @@ export const register = async (req, res) => {
     // save user to the database
     await newUser.save();
 
-    res.status(201).json({ message: "User register account sucessfully!!" ,newUser });
+    res
+      .status(201)
+      .json({ message: "User register account sucessfully!!", newUser });
   } catch (err) {
     res.status(500).json({ message: "Internal server error", err });
     console.error(err);
@@ -77,5 +79,82 @@ export const login = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Somthing went wrong!!" });
+  }
+};
+
+export const me = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(400).json({ message: "User not found" });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const payload = {
+      id: user._id,
+      username: user.username,
+      role: user.role,
+    };
+
+    // issue a fresh token so client can use updated role in token if desired
+    const token = jwt.sign(payload, process.env.SECRET_KEY, {
+      expiresIn: "1h",
+    });
+
+    return res.status(200).json({
+      message: "Current user",
+      user: { username: user.username, role: user.role },
+      token,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(400).json({ message: "User not found" });
+
+    const { username, password } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (username && username !== user.username) {
+      const exists = await User.findOne({ username });
+      if (exists && exists._id.toString() !== userId) {
+        return res.status(409).json({ message: "Username already taken" });
+      }
+      user.username = username;
+    }
+
+    if (password) {
+      const hash = await bcrypt.hash(password, 10);
+      user.password = hash;
+    }
+
+    await user.save();
+
+    const payload = {
+      id: user._id,
+      username: user.username,
+      role: user.role,
+    };
+
+    const token = jwt.sign(payload, process.env.SECRET_KEY, {
+      expiresIn: "1h",
+    });
+
+    return res
+      .status(200)
+      .json({
+        message: "Profile updated",
+        user: { username: user.username, role: user.role },
+        token,
+      });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Something went wrong" });
   }
 };

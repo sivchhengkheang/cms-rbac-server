@@ -6,17 +6,18 @@ import userRoute from "./routers/userRoute.js";
 import { dbConnection } from "./config/dbConnection.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import cors from "cors";
+import { createServer } from "http";
+import { initSocket } from "./socket.js";
 
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
 
-const PORT = process.env.PORT;
-
 // Content routes
-app.use("/", contentRoute);
+app.use("/api", contentRoute);
 
 // authentication route
 app.use("/api/auth", authRoute);
@@ -30,7 +31,11 @@ app.use(errorHandler);
 const start = async () => {
   try {
     await dbConnection();
-    app.listen(PORT, () => {
+
+    const httpServer = createServer(app);
+    const io = initSocket(httpServer);
+
+    httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`server running on http://localhost:${PORT}`);
     });
   } catch (err) {
