@@ -79,12 +79,13 @@ export const login = async (req, res) => {
     });
 
     const cookieSecure = process.env.NODE_ENV === "production";
+    const cookieSameSite = process.env.NODE_ENV === "production" ? "none" : "lax";
 
     // Set refresh token as an httpOnly cookie (longer expiry)
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: cookieSecure,
-      sameSite: "lax",
+      sameSite: cookieSameSite,
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
@@ -93,7 +94,7 @@ export const login = async (req, res) => {
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: cookieSecure,
-      sameSite: "lax",
+      sameSite: cookieSameSite,
       maxAge: 1 * 60 * 60 * 1000,
       path: "/",
     });
@@ -105,6 +106,7 @@ export const login = async (req, res) => {
         username: user.username,
         role: user.role,
       },
+      token: accessToken,
     });
   } catch (err) {
     console.error(err);
@@ -217,11 +219,12 @@ export const refreshToken = async (req, res) => {
       });
 
       const cookieSecure = process.env.NODE_ENV === "production";
+      const cookieSameSite = process.env.NODE_ENV === "production" ? "none" : "lax";
 
       res.cookie("accessToken", newAccessToken, {
         httpOnly: true,
         secure: cookieSecure,
-        sameSite: "lax",
+        sameSite: cookieSameSite,
         maxAge: 1 * 60 * 60 * 1000,
         path: "/",
       });
@@ -237,17 +240,19 @@ export const refreshToken = async (req, res) => {
 export const logOut = async (req, res) => {
   const cookieSecure = process.env.NODE_ENV === "production";
 
+  const cookieSameSite = process.env.NODE_ENV === "production" ? "none" : "lax";
+
   res.clearCookie("refreshToken", {
     httpOnly: true,
     secure: cookieSecure,
-    sameSite: "lax",
+    sameSite: cookieSameSite,
     path: "/",
   });
 
   res.clearCookie("accessToken", {
     httpOnly: true,
     secure: cookieSecure,
-    sameSite: "lax",
+    sameSite: cookieSameSite,
     path: "/",
   });
 

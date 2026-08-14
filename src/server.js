@@ -13,6 +13,9 @@ import cookiesParser from "cookie-parser";
 dotenv.config();
 
 const app = express();
+// When behind a proxy (Render, Heroku, nginx), trust the first proxy
+// so that Express knows the original request protocol for secure cookies.
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
 
