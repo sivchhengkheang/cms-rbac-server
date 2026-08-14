@@ -64,17 +64,47 @@ export const login = async (req, res) => {
       role: user.role,
     };
 
-    const token = jwt.sign(payload, process.env.SECRET_KEY, {
+    // Generate Refresh token
+    const refreshToken = jwt.sign(
+      payload,
+      process.env.REFRESH_TOKEN_SECRET_KEY,
+      {
+        expiresIn: "7d",
+      },
+    );
+
+    // Generate access token and set both tokens as httpOnly cookies
+    const accessToken = jwt.sign(payload, process.env.SECRET_KEY, {
       expiresIn: "1h",
     });
 
+    const cookieSecure = process.env.NODE_ENV === "production";
+
+    // Set refresh token as an httpOnly cookie (longer expiry)
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: cookieSecure,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    // Set access token as an httpOnly cookie (short expiry)
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: cookieSecure,
+      sameSite: "lax",
+      maxAge: 1 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    // Return only non-sensitive user info
     res.status(200).json({
-      message: "User login sucessful",
+      message: "User login successful",
       user: {
         username: user.username,
         role: user.role,
       },
-      token,
     });
   } catch (err) {
     console.error(err);
@@ -146,15 +176,80 @@ export const updateProfile = async (req, res) => {
       expiresIn: "1h",
     });
 
-    return res
-      .status(200)
-      .json({
-        message: "Profile updated",
-        user: { username: user.username, role: user.role },
-        token,
-      });
+    return res.status(200).json({
+      message: "Profile updated",
+      user: { username: user.username, role: user.role },
+      token,
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Something went wrong" });
   }
+};
+
+export const refreshToken = async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+
+  if (!refreshToken) {
+    return res
+      .status(401)
+      .json({ message: "Refresh token not found. Please log in." });
+  }
+
+  jwt.verify(
+    refreshToken,
+    process.env.REFRESH_TOKEN_SECRET_KEY,
+    (err, decoded) => {
+      if (err) {
+        return res
+          .status(403)
+          .json({ message: "Invalid or expired refresh token." });
+      }
+
+      const refreshPayload = {
+        id: decoded?.id || decoded?._id,
+        username: decoded?.username,
+        role: decoded?.role,
+      };
+
+      const newAccessToken = jwt.sign(refreshPayload, process.env.SECRET_KEY, {
+        expiresIn: "1h",
+      });
+
+      const cookieSecure = process.env.NODE_ENV === "production";
+
+      res.cookie("accessToken", newAccessToken, {
+        httpOnly: true,
+        secure: cookieSecure,
+        sameSite: "lax",
+        maxAge: 1 * 60 * 60 * 1000,
+        path: "/",
+      });
+
+      // Optionally return user info so frontend can update UI
+      return res.json({
+        user: { username: refreshPayload.username, role: refreshPayload.role },
+      });
+    },
+  );
+};
+
+export const logOut = async (req, res) => {
+  const cookieSecure = process.env.NODE_ENV === "production";
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: cookieSecure,
+    sameSite: "lax",
+    path: "/",
+  });
+
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    secure: cookieSecure,
+    sameSite: "lax",
+    path: "/",
+  });
+
+  res.status(200).json({ message: "Logged out successfully." });
 };

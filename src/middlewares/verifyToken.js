@@ -3,13 +3,16 @@ import jwt from "jsonwebtoken";
 const verifyToken = (req, res, next) => {
   const authHeader = req.header("Authorization");
 
-  if (!authHeader) {
-    return res.status(400).json({ message: "User unauthorized" });
+  let token = null;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  } else if (req.cookies && req.cookies.accessToken) {
+    token = req.cookies.accessToken;
   }
 
-  const token = authHeader.split(" ")[1];
   if (!token) {
-    return res.status(401).json({ message: "User token not signed" });
+    return res.status(401).json({ message: "User unauthorized" });
   }
 
   jwt.verify(token, process.env.SECRET_KEY, (err, decodePayload) => {

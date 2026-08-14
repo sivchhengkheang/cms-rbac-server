@@ -5,14 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node src/server.js",
-    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "start": "nodemon src/server.js",
     "build": "node --check src/server.js"
   },
   "keywords": [],
   "type": "module",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

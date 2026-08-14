@@ -8,13 +8,32 @@ import errorHandler from "./middlewares/errorHandler.js";
 import cors from "cors";
 import { createServer } from "http";
 import { initSocket } from "./socket.js";
+import cookiesParser from "cookie-parser";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
-app.use(cors());
+// Configure CORS to allow credentials and only echo back allowed origins
+const rawClientUrls = process.env.CLIENT_URL || "http://localhost:3000";
+const allowedOrigins = rawClientUrls
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow non-browser requests (like curl or server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("CORS policy: Origin not allowed"));
+    },
+    credentials: true,
+  }),
+);
+app.use(cookiesParser());
 
 // Content routes
 app.use("/api", contentRoute);
