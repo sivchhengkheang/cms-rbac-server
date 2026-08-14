@@ -21,40 +21,18 @@ app.use(express.json());
 
 // Configure CORS to allow credentials and echo back allowed origins.
 // Use a forgiving policy in non-production to avoid blocking local dev.
-const rawClientUrls = process.env.CLIENT_URL || "http://localhost:3000";
-const allowedOrigins = rawClientUrls
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow non-browser requests (like curl or server-to-server)
-    if (!origin) return callback(null, true);
-    // Allow exact match against configured origins
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Allow during development if NODE_ENV is not production
-    if (process.env.NODE_ENV !== "production") return callback(null, true);
-    // Otherwise block
-    return callback(null, false);
-  },
-  credentials: true,
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Accept",
-  ],
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL, // Your Next.js frontend URL
+    credentials: true, // CRITICAL: This allows the browser to accept and send the cookie
+  }),
+);
 // Ensure preflight requests are handled: respond to OPTIONS after CORS sets headers
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
+// app.use((req, res, next) => {
+// if (req.method === "OPTIONS") return res.sendStatus(204);
+// next();
+// });
 
 app.use(cookiesParser());
 
