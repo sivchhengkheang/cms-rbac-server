@@ -7,6 +7,7 @@ import {
 } from "../contollers/user.js";
 import verifyToken from "../middlewares/verifyToken.js";
 import checkRole from "../middlewares/checkRole.js";
+import { cacheMiddleware } from "../middlewares/cacheMiddleware.js";
 
 const route = express.Router();
 
